@@ -13,6 +13,8 @@ import glob
 import sys
 import os
 from os.path import exists
+import tkinter as tk
+import tkinter.messagebox
 
 
 config = {
@@ -24,6 +26,7 @@ config = {
 defaultFolders = ['.vs', 'Binaries', 'DerivedDataCache', 'Intermediate']
 defaultExtensions = ['.sln']
 
+# Current file path
 path = os.path.dirname(os.path.abspath(__file__))
 
 
@@ -48,14 +51,47 @@ def initArgs():
     return parser.parse_args()
 
 
-# Check if there are any arguments, except the script call
+def warningPrompt():
+    "Prompt the user that they might be in the wrong directory"
+
+    # Open a new tkinter main window
+    root = tk.Tk()
+    root.title('Main')
+    root.geometry('0x0')
+
+    # Hide main window
+    root.withdraw()
+
+    # Show popup
+    answer = tkinter.messagebox.askokcancel(title="Unreal Cleanup Tool", 
+    message = "You are not in an unreal project folder. This program deletes files. Run program?")
+    return answer
+
+
+def checkDirectory():
+    "Check if we are in an unreal project directory"
+
+    if any(File.endswith(".uproject") for File in os.listdir(".")):
+        pass
+    else: 
+        return warningPrompt()
+
+
 def checkArgs():
+    "Check if there are any arguments, except the script call"
+
     return True if len(sys.argv) < 2 else False
 
 
-# Decide what to do depending on the arguments given
 def processArgs(args):
+    "Decide what to do depending on the arguments given"
+
     global config
+
+    # TEST
+    if args.clear: 
+        os.system('cmd /k "cls"')
+        print("Finished clearing.")
 
     # Reset list
     if args.reset is not None:
@@ -167,8 +203,9 @@ def processArgs(args):
     saveData()
 
 
-# Perform delete operation on all listed items
 def delete():
+    "Perform delete operation on all listed items"
+
     num_deleted = 0
     for i, val in enumerate(config['files']):
         if val[0] == '/': continue
@@ -200,8 +237,9 @@ def delete():
     print(f'Deleted {num_deleted} file{s}/folder{s}.')
     
 
-# Load config
 def loadData():
+    "Load config"
+
     global config
     # Load saves files and folders
     if os.path.exists('uct_config.json'):
@@ -231,11 +269,11 @@ def saveData():
             pass
     
 
-
 def main():
-    loadData()
-    delete() if checkArgs() else processArgs(initArgs())
-
+    if checkDirectory():
+        loadData()
+        delete() if checkArgs() else processArgs(initArgs())
+    
         
 if __name__ == "__main__":
     main()
