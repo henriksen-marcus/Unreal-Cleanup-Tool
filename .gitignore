@@ -153,3 +153,4 @@ cython_debug/
 
 .vscode/settings.json
 exec/
+scripts/uct_config.json

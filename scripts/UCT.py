@@ -17,11 +17,13 @@ import tkinter as tk
 import tkinter.messagebox
 
 
-config = {
+defaultConfig = {
     'files':[],
     'folders':['.vs', 'Binaries', 'DerivedDataCache', 'Intermediate'],
     'extensions':['.sln']
 }
+
+config = {}
 
 defaultFolders = ['.vs', 'Binaries', 'DerivedDataCache', 'Intermediate']
 defaultExtensions = ['.sln']
@@ -44,7 +46,7 @@ def initArgs():
     parser.add_argument('-rf', help='Remove a folder from delete list', type=str, metavar='[foldername]')
     parser.add_argument('-ae', help='Add a file extension to the delete list', type=str, metavar='[ext]')
     parser.add_argument('-re', help='Remove a file extension from the delete list', type=str, metavar='[ext]')
-    parser.add_argument('-list', help='Show the list of files and folders', action='store_true')
+    parser.add_argument('-show', help='Show the current file/folder delete configuration', action='store_true')
     parser.add_argument('-reset', help='Reset delete list to default', action='store_true')
 
     # Check user's arguments and add them to array
@@ -64,7 +66,7 @@ def warningPrompt():
 
     # Show popup
     answer = tkinter.messagebox.askokcancel(title="Unreal Cleanup Tool", 
-    message = "You are not in an unreal project folder. This program deletes files. Run program?")
+    message = "You are not in an unreal engine project folder. This program deletes files. Continue?")
     return answer
 
 
@@ -80,7 +82,7 @@ def checkDirectory():
 def checkArgs():
     "Check if there are any arguments, except the script call"
 
-    return True if len(sys.argv) < 2 else False
+    return False if len(sys.argv) < 2 else True
 
 
 def processArgs(args):
@@ -88,15 +90,11 @@ def processArgs(args):
 
     global config
 
-    # TEST
-    if args.clear: 
-        os.system('cmd /k "cls"')
-        print("Finished clearing.")
-
     # Reset list
     if args.reset is not None:
         if args.reset:
-            config.clear()
+            config = defaultConfig
+            print("List reset to default.")
 
     # Add
     if args.a is not None:
@@ -189,17 +187,20 @@ def processArgs(args):
             print(f"'{mod}' does not exists in the list!'")
 
     # Show list
-    if args.list is not None:
-        if args.list:
-            tmp = config
+    if args.show is not None:
+        if args.show:
             indent = "    "
-            # Remove disabled default arguments
-            for key in tmp:
+            # Don't print disabled default arguments (marked with '/')
+            for key in config:
                 print(f'{key.capitalize()}:')
-                for value in tmp[key]:
+                valueCount = 0
+                for value in config[key]:
                     if value[0] != '/':
                         print(indent + value)
-
+                        valueCount += 1
+                # If there were no active values, print empty
+                if valueCount == 0:
+                    print(indent + '(empty)')
     saveData()
 
 
@@ -241,24 +242,25 @@ def loadData():
     "Load config"
 
     global config
-    # Load saves files and folders
+    # Load json config file
     if os.path.exists('uct_config.json'):
         with open('uct_config.json', 'r') as openfile:
             # Reading from json file
             config = json.load(openfile)
+    else:
+        config = defaultConfig
 
 
 def saveData():
     # Serialize
-    json_object = json.dumps(config, indent=4)
+    json_object = json.dumps(config, indent = 4)
 
+    # Delete old file
     if exists("uct_config.json"):
-        # NOTE: PermissionError if opening mode is not 'r+'. 
-        # Python cannot open hidden files that way.
-        fileMode = 'r+'
-    else:
-        # Create new file
-        fileMode = 'w'
+        os.remove("uct_config.json")
+
+    # Create new file
+    fileMode = 'w'
 
     with open("uct_config.json", fileMode) as outfile:
         outfile.write(json_object)
@@ -270,9 +272,13 @@ def saveData():
     
 
 def main():
-    if checkDirectory():
-        loadData()
-        delete() if checkArgs() else processArgs(initArgs())
+    loadData()
+    if checkArgs():
+        processArgs(initArgs())
+    else:
+        # Check if we are in an unreal directory
+        if checkDirectory(): return
+        delete()
     
         
 if __name__ == "__main__":
