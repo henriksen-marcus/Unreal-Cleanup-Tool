@@ -152,8 +152,10 @@ def processArgs(args):
     # Reset list
     if args.reset is not None:
         if args.reset:
-            localconfig = defaultConfig
+            config = defaultConfig
             print("List reset to default.")
+            saveData()
+            return
 
     # Add
     if args.a is not None:
@@ -383,7 +385,6 @@ def saveData():
 
     # Create new file
     fileMode = 'w'
-
     with open(file, fileMode) as outfile:
         outfile.write(json_object)
 
@@ -394,7 +395,6 @@ def findUnrealBuildTool():
     # Check if we have it saved first
     if appdataSavedVars["ubtPath"] is not None:
         if os.path.exists(appdataSavedVars["ubtPath"]):
-            print("Found UnrealBuildTool.exe from saved path.")
             return appdataSavedVars["ubtPath"]
 
     # Get engine version from uproject file
@@ -419,7 +419,13 @@ def findUnrealBuildTool():
         pass
 
     if installed_directory is not None:
-        return findFile(installed_directory, "UnrealBuildTool.exe")
+        path = findFile(installed_directory, "UnrealBuildTool.exe")
+        if path is not None and os.path.exists(path) and os.path.basename(path) == "UnrealBuildTool.exe":
+            appdataSavedVars['ubtPath'] = path
+            saveData()
+            return path
+        else: 
+            return None
     else:
         print("Could not find Unreal Engine install directory with correct version. Please use -uedir to select the directory.")
         return None    
