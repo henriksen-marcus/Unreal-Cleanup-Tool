@@ -1,8 +1,7 @@
 # Unreal Cleanup Tool (UCT) by Marcus Henriksen
-
-# This program is designed to delete unreal engine
-# temporary files with only one click. List of files to 
-# delete is also customizable.
+# This program deletes unreal engine temporary files with one click. 
+# You can also customize the list of files to delete.
+# Use 'UCT.py -h' in cmd for available commands.
 
 import argparse
 from argparse import RawTextHelpFormatter
@@ -17,7 +16,6 @@ import tkinter as tk
 import tkinter.messagebox
 import tkinter.filedialog
 import winreg
-import fnmatch
 
 defaultFolders = ['.vs', 'Binaries', 'DerivedDataCache', 'Intermediate']
 defaultExtensions = ['.sln']
@@ -30,10 +28,15 @@ defaultConfig = {
     },
     'settings':
     {
-        'generateProjectFiles':False
+        'generateProjectFiles':False,
+        'compile':False,
+        'disableCompileMessage':False
     }
 }
 config = {}
+
+# JSON data in uproject file
+uprojectData = {}
 
 # We save the UnrealBuildTool directory in localappdata
 # so that we don't have to search for it every time
@@ -66,7 +69,9 @@ def initArgs():
     parser.add_argument('-rf', help='Remove a folder from delete list', type=str, metavar='[foldername]')
     parser.add_argument('-ae', help='Add a file extension to the delete list', type=str, metavar='[ext]')
     parser.add_argument('-re', help='Remove a file extension from the delete list', type=str, metavar='[ext]')
-    parser.add_argument('-gpf', help="Toggle automatic generation of project files after deletion", action='store_true')
+    parser.add_argument('-gpf', help="Toggle automatic generation of VS project files after deletion", action='store_true')
+    parser.add_argument('-compile', help="Toggle automatic compilation of project after deletion", action='store_true')
+    parser.add_argument('-msg', help="Toggle the popup message when the project was succesfully compiled", action='store_true')
     parser.add_argument('-show', help='Show the current file/folder delete configuration', action='store_true')
     parser.add_argument('-reset', help='Reset delete list to default', action='store_true')
 
@@ -77,36 +82,25 @@ def initArgs():
     return parser.parse_args()
 
 
-def warningPrompt():
-    "Prompt the user that they might be in the wrong directory"
-
-    # Open a new tkinter main window
-    root = tk.Tk()
-    root.title('Main')
-    root.geometry('0x0')
-
-    # Hide main window
-    root.withdraw()
+def askWarningPrompt(message):
+    "Prompt the user for a yes/no answer"
 
     # Show popup
-    answer = tk.messagebox.askokcancel(title="Unreal Cleanup Tool", 
-    message = "You are not in an unreal engine project folder. This program deletes files. Continue?")
+    answer = tk.messagebox.askokcancel("Unreal Cleanup Tool", message, icon=tk.messagebox.WARNING)
     return answer
 
 
-def messagePrompt(message):
+def infoPrompt(message):
     "Show a message prompt"
-
-    # Open a new tkinter main window
-    root = tk.Tk()
-    root.title('Main')
-    root.geometry('0x0')
-
-    # Hide main window
-    root.withdraw()
 
     # Show popup
     tk.messagebox.showinfo("Unreal Cleanup Tool", message)
+
+def errorPrompt(message):
+    "Show an error prompt"
+
+    # Show popup
+    tk.messagebox.showerror("Unreal Cleanup Tool", message)
 
 
 def folderPrompt():
@@ -124,17 +118,11 @@ def folderPrompt():
     return tk.filedialog.askdirectory()
 
 
-def checkDirectory(console=False):
+def checkDirectory():
     "Check if we are in an unreal project directory and save the uproject path"
 
-    global uprojectPath
-    for file in os.listdir("."):
-        if file.endswith(".uproject"):
-            uprojectPath = os.path.abspath(file)
-            return True
-
-    if not console and uprojectPath is None:
-        return warningPrompt()
+    if uprojectPath is None:
+        return askWarningPrompt("You are not in an unreal engine project folder. This program deletes files. Continue?")
 
 
 def checkArgs():
@@ -260,8 +248,22 @@ def processArgs(args):
         
         print(f"Generate project files set to {config['settings']['generateProjectFiles']}")
 
+    # Toggle automatic compilation
+    if args.compile:
+        if config['settings']['compile'] == False: # Enable
+            if config['settings']['generateProjectFiles'] == True:
+                config['settings']['compile'] = True
+            else:
+                print("Generate project files must be active to enable automatic compilaton. Use -gpf to enable it.")
+        else:
+            config['settings']['compile'] = False
+        print(f"Automatic compilation set to {config['settings']['compile']}")
 
-    # Show list
+    if args.msg:
+        config['settings']['disableCompileMessage'] = not config['settings']['disableCompileMessage']
+        print(f"Compile success popup message {'turned off' if config['settings']['disableCompileMessage'] else 'turned on'}.")
+
+    # Show delete list
     if args.show:
         indent = "    "
         # Don't print disabled default arguments (marked with '/')
@@ -277,6 +279,7 @@ def processArgs(args):
                 print(indent + '(empty)')
 
         print(f"\nGenerate project files set to {config['settings']['generateProjectFiles']}")
+        print(f"Automatic compilation set to {config['settings']['compile']}")
 
     # Opens folder select dialog and saves the path
     if args.uedir is not None:
@@ -350,6 +353,17 @@ def loadData():
     else:
         appdataSavedVars = defaultAppdataSavedVars
 
+    global uprojectPath
+    for file in os.listdir("."):
+        if file.endswith(".uproject"):
+            uprojectPath = os.path.abspath(file)
+
+    # Load uproject file into memory
+    global uprojectData
+    if uprojectPath is not None:
+        with open(uprojectPath, 'r') as openfile:
+                    uprojectData = json.load(openfile)
+
 
 def saveData():
     # Local configuration file
@@ -398,7 +412,6 @@ def findUnrealBuildTool():
             return appdataSavedVars["ubtPath"]
 
     # Get engine version from uproject file
-    uprojectData = None
     if uprojectPath is not None:
         with open(uprojectPath, 'r') as openfile:
                     uprojectData = json.load(openfile)
@@ -442,8 +455,8 @@ def findFile(root, filename):
 def generateProjectFiles():
     ubtPath = findUnrealBuildTool()
     if ubtPath is None:
-        messagePrompt("Could not generate project files.")
-        return
+        infoPrompt("Could not generate project files.")
+        return False
 
     command = [ubtPath, "-projectfiles", uprojectPath]
     try:
@@ -451,13 +464,39 @@ def generateProjectFiles():
         subprocess.run(command, check=True)
         #messagePrompt("Finished generating project files.")
     except subprocess.CalledProcessError as e:
-        print("Error generating project files:", e)
+        infoPrompt("Error generating project files:", e)
+        return False
+
+
+def compile():
+    ubtPath = findUnrealBuildTool()
+    try:
+        projectName = uprojectData['Modules'][0]['Name']
+    except:
+        projectName = None
+    
+    if projectName is None or ubtPath is None:
+        errorPrompt("Could not compile.")
+        return False
+
+    command = [ubtPath, uprojectPath, projectName, "Development", "Win64"]
+    try:
+        # Call UBT
+        subprocess.run(command, check=True)
+        if not config['settings']['disableCompileMessage']: 
+            infoPrompt(f"'{projectName}' rebuilt successfully.")
+    except subprocess.CalledProcessError as e:
+        errorPrompt("Could not compile. " + e)
+        return False
 
 # if it works it ain't stupid
 def checkgpf():
     "Check if we can generate project files"
 
-    # Check if we have it saved first
+    # Check if we have a uproject file
+    if uprojectPath is None:
+        return {'success': False, 'message': 'Could not find uproject file.'}
+
     if appdataSavedVars["ubtPath"] is not None:
         if os.path.exists(appdataSavedVars["ubtPath"]):
             return {'success': True, 'message': ''}
@@ -491,14 +530,18 @@ def checkgpf():
 def main():
     loadData()
     if checkArgs():
-        checkDirectory(console=True)
         processArgs(initArgs())
     else:
         # Check if we are in an unreal directory
         if checkDirectory() == False: return
         delete()
+
         if config['settings']['generateProjectFiles'] == True:
-            generateProjectFiles()
+            if generateProjectFiles() == False: return
+            
+        # We do an extra check in case the user modified the json file
+        if config['settings']['compile'] == True and config['settings']['generateProjectFiles'] == True:
+            if compile() == False: return
           
 if __name__ == "__main__":
     main()
