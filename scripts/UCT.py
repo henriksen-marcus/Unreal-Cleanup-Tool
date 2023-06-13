@@ -455,7 +455,7 @@ def findFile(root, filename):
 def generateProjectFiles():
     ubtPath = findUnrealBuildTool()
     if ubtPath is None:
-        infoPrompt("Could not generate project files.")
+        errorPrompt("Could not generate project files.")
         return False
 
     command = [ubtPath, "-projectfiles", uprojectPath]
@@ -464,7 +464,7 @@ def generateProjectFiles():
         subprocess.run(command, check=True)
         #messagePrompt("Finished generating project files.")
     except subprocess.CalledProcessError as e:
-        infoPrompt("Error generating project files:", e)
+        errorPrompt("Error generating project files.")
         return False
 
 
@@ -486,7 +486,7 @@ def compile():
         if not config['settings']['disableCompileMessage']: 
             infoPrompt(f"'{projectName}' rebuilt successfully.")
     except subprocess.CalledProcessError as e:
-        errorPrompt("Could not compile. " + e)
+        errorPrompt("Could not compile.")
         return False
 
 # if it works it ain't stupid
