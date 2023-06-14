@@ -5,7 +5,7 @@ It's a small script with the purpose of quickly deleting unreal engine temporary
 
 ## What can it do?
 It is configured to delete the temp files out of the box. You don't need to change any settings for it to work like expected.
-However, the script allows you to modify what files, folders and extensions to delete. Additionally it can generate the visual studio project files for you and even compile the project, giving you a full project rebuild with a simple double click.
+However, the script allows you to modify what files, folders and extensions to delete. Additionally it can generate the visual studio project files for you.
 
 ## What do I need for it to work?
 You need to have [Python](https://www.python.org/downloads/) installed to run the script, and a Windows system.
