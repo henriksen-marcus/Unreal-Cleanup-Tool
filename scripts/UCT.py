@@ -29,7 +29,7 @@ defaultConfig = {
     'settings':
     {
         'generateProjectFiles':False,
-        'compile':False,
+        #'compile':False,
         'disableCompileMessage':False
     }
 }
@@ -70,8 +70,8 @@ def initArgs():
     parser.add_argument('-ae', help='Add a file extension to the delete list', type=str, metavar='[ext]')
     parser.add_argument('-re', help='Remove a file extension from the delete list', type=str, metavar='[ext]')
     parser.add_argument('-gpf', help="Toggle automatic generation of VS project files after deletion", action='store_true')
-    parser.add_argument('-compile', help="Toggle automatic compilation of project after deletion", action='store_true')
-    parser.add_argument('-msg', help="Toggle the popup message when the project was succesfully compiled", action='store_true')
+    #parser.add_argument('-compile', help="Toggle automatic compilation of project after deletion", action='store_true')
+    #parser.add_argument('-msg', help="Toggle the popup message when the project was succesfully compiled", action='store_true')
     parser.add_argument('-show', help='Show the current file/folder delete configuration', action='store_true')
     parser.add_argument('-reset', help='Reset delete list to default', action='store_true')
 
@@ -249,19 +249,19 @@ def processArgs(args):
         print(f"Generate project files set to {config['settings']['generateProjectFiles']}")
 
     # Toggle automatic compilation
-    if args.compile:
-        if config['settings']['compile'] == False: # Enable
-            if config['settings']['generateProjectFiles'] == True:
-                config['settings']['compile'] = True
-            else:
-                print("Generate project files must be active to enable automatic compilaton. Use -gpf to enable it.")
-        else:
-            config['settings']['compile'] = False
-        print(f"Automatic compilation set to {config['settings']['compile']}")
+    # if args.compile:
+    #     if config['settings']['compile'] == False: # Enable
+    #         if config['settings']['generateProjectFiles'] == True:
+    #             config['settings']['compile'] = True
+    #         else:
+    #             print("Generate project files must be active to enable automatic compilaton. Use -gpf to enable it.")
+    #     else:
+    #         config['settings']['compile'] = False
+    #     print(f"Automatic compilation set to {config['settings']['compile']}")
 
-    if args.msg:
-        config['settings']['disableCompileMessage'] = not config['settings']['disableCompileMessage']
-        print(f"Compile success popup message {'turned off' if config['settings']['disableCompileMessage'] else 'turned on'}.")
+    # if args.msg:
+    #     config['settings']['disableCompileMessage'] = not config['settings']['disableCompileMessage']
+    #     print(f"Compile success popup message {'turned off' if config['settings']['disableCompileMessage'] else 'turned on'}.")
 
     # Show delete list
     if args.show:
@@ -279,7 +279,7 @@ def processArgs(args):
                 print(indent + '(empty)')
 
         print(f"\nGenerate project files set to {config['settings']['generateProjectFiles']}")
-        print(f"Automatic compilation set to {config['settings']['compile']}")
+        #print(f"Automatic compilation set to {config['settings']['compile']}")
 
     # Opens folder select dialog and saves the path
     if args.uedir is not None:
@@ -468,26 +468,26 @@ def generateProjectFiles():
         return False
 
 
-def compile():
-    ubtPath = findUnrealBuildTool()
-    try:
-        projectName = uprojectData['Modules'][0]['Name']
-    except:
-        projectName = None
+# def compile():
+#     ubtPath = findUnrealBuildTool()
+#     try:
+#         projectName = uprojectData['Modules'][0]['Name']
+#     except:
+#         projectName = None
     
-    if projectName is None or ubtPath is None:
-        errorPrompt("Could not compile.")
-        return False
+#     if projectName is None or ubtPath is None:
+#         errorPrompt("Could not compile.")
+#         return False
 
-    command = [ubtPath, uprojectPath, projectName, "Development", "Win64"]
-    try:
-        # Call UBT
-        subprocess.run(command, check=True)
-        if not config['settings']['disableCompileMessage']: 
-            infoPrompt(f"'{projectName}' rebuilt successfully.")
-    except subprocess.CalledProcessError as e:
-        errorPrompt("Could not compile.")
-        return False
+#     command = [ubtPath, uprojectPath, projectName, "Development", "Win64"]
+#     try:
+#         # Call UBT
+#         subprocess.run(command, check=True)
+#         if not config['settings']['disableCompileMessage']: 
+#             infoPrompt(f"'{projectName}' rebuilt successfully.")
+#     except subprocess.CalledProcessError as e:
+#         errorPrompt("Could not compile.")
+#         return False
 
 # if it works it ain't stupid
 def checkgpf():
@@ -540,8 +540,8 @@ def main():
             if generateProjectFiles() == False: return
             
         # We do an extra check in case the user modified the json file
-        if config['settings']['compile'] == True and config['settings']['generateProjectFiles'] == True:
-            if compile() == False: return
+        # if config['settings']['compile'] == True and config['settings']['generateProjectFiles'] == True:
+        #     if compile() == False: return
           
 if __name__ == "__main__":
     main()
