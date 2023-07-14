@@ -11,7 +11,7 @@ However, the script allows you to modify what files, folders and extensions to d
 You need to have [Python](https://www.python.org/downloads/) installed to run the script, and a Windows system.
 
 ## How do I use it? :zap:
-Download the `UCT.py` file from [Releases](https://github.com/henriksen-marcus/Unreal-Cleanup-Tool/releases) and copy it to your unreal engine project directory. It should be on the same level as your `.uproject` file. Make sure unreal engine is closed before running the script. Then double click on the `UCT.py` file to clean the project.
+Download the `UCT.py` file from [Releases](https://github.com/henriksen-marcus/Unreal-Cleanup-Tool/releases) and copy it to your unreal engine project directory. It should be on the same level as your `.uproject` file. Make sure unreal engine and visual studio is closed before running the script. Then double click on the `UCT.py` file to clean the project.
 
 ## Changing settings ⚙️
 To change the settings you need to open the command line in the directory of the script.
