@@ -41,7 +41,8 @@ uprojectData = {}
 # We save the UnrealBuildTool directory in localappdata
 # so that we don't have to search for it every time
 defaultAppdataSavedVars = {
-    'ubtPath':None
+    'ubtPath':None,
+    'devenvPath':None
 }
 appdataSavedVars = {}
 appdataSavedVarsPath = os.environ['LOCALAPPDATA']
@@ -75,8 +76,9 @@ def initArgs():
     parser.add_argument('-show', help='Show the current file/folder delete configuration', action='store_true')
     parser.add_argument('-reset', help='Reset delete list to default', action='store_true')
 
-    # For user to manually specify the unreal engine directory   
+    # For user to manually specify the unreal engine directory and visual studio directory
     parser.add_argument('-uedir', help=argparse.SUPPRESS, action='store_true')
+    parser.add_argument('-vsdir', help=argparse.SUPPRESS, action='store_true')
 
     # Check user's arguments and add them to array
     return parser.parse_args()
@@ -286,11 +288,22 @@ def processArgs(args):
         if args.uedir:
             givenPath = folderPrompt()
             path = findFile(givenPath, "UnrealBuildTool.exe")
-            if path is not None and os.path.exists(path) and os.path.basename(path) == "UnrealBuildTool.exe":
+            if path is not None and os.path.exists(path):
                 appdataSavedVars['ubtPath'] = path
                 print("Successfully found Unreal Engine installation.")
             else:
-                print(f"Could not find UnrealBuildTool.exe in {givenPath}")
+                print(f"Could not find UnrealBuildTool.exe in {givenPath}.")
+                return
+            
+    if args.vsdir is not None:
+        if args.vsdir:
+            givenPath = folderPrompt()
+            path = findFile(givenPath, "devenv.exe")
+            if path is not None and os.path.exists(path):
+                appdataSavedVars['vsPath'] = path
+                print("Successfully found Visual Studio installation.")
+            else:
+                print(f"Could not find devenv.exe in {givenPath}.")
                 return
 
     config['fileManagement'] = localconfig
@@ -452,6 +465,15 @@ def findFile(root, filename):
     return None
 
 
+def findExtension(root, ext):
+    for dirpath, dirnames, filenames in os.walk(root):
+        for file in filenames:
+            if file.endswith(ext):
+                file_path = os.path.join(dirpath, file)
+                return os.path.abspath(file_path)
+    return None
+
+
 def generateProjectFiles():
     ubtPath = findUnrealBuildTool()
     if ubtPath is None:
@@ -467,27 +489,80 @@ def generateProjectFiles():
         errorPrompt("Error generating project files.")
         return False
 
-
+# devenv BowlingGame.sln /Build "Development Editor|Win64"
 def compile():
-    ubtPath = findUnrealBuildTool()
     try:
         projectName = uprojectData['Modules'][0]['Name']
     except:
         projectName = None
-    
-    if projectName is None or ubtPath is None:
-        errorPrompt("Could not compile.")
-        return False
 
-    command = [ubtPath, uprojectPath, projectName, "Development", "Win64"]
+    path = findDevenv()
+    slnPath = findExtension(".", ".sln")
+
+    if path is None or slnPath is None:
+        errorPrompt("Could not compile.")
+        print("Path: " + str(path))
+        print("slnPath: " + str(slnPath))
+        return False
+    
+    # Remove .exe from path, idk why it doesn't work with it
+    if path.endswith(".exe"):
+        path = path[:-4]
+    print(path)
+    command = [path, slnPath, "/Build", "Development Editor|Win64"]
     try:
-        # Call UBT
-        subprocess.run(command, check=True)
+        # Call devenv (visual studio)
+        result = subprocess.run(command, check=True, capture_output=True, text=True)
+        print("Command output:", result.stdout)
+        print("Command error:", result.stderr)
         if not config['settings']['disableCompileMessage']: 
             infoPrompt(f"'{projectName}' rebuilt successfully.")
     except subprocess.CalledProcessError as e:
         errorPrompt("Could not compile.")
+        print(e)
         return False
+
+def findDevenv():
+    "Returns the path of the visual studio executable"
+
+    # Check if we have it saved first
+    if appdataSavedVars.get("devenvPath") is not None:
+        if os.path.exists(appdataSavedVars["devenvPath"]):
+            return appdataSavedVars["devenvPath"]
+    
+    devenvPath = "C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\IDE\devenv.exe"
+    if os.path.exists(devenvPath):
+        return devenvPath
+    
+    if os.path.exists("C:\Program Files\Microsoft Visual Studio"):
+        vsPath = findHighestVersion("C:\Program Files\Microsoft Visual Studio")
+        if vsPath is not None:
+            devenvPath = findFile(vsPath, "devenv.exe")
+            if devenvPath is not None:
+                return devenvPath
+            
+    print("Could not find Visual Studio install directory. Please use -vsdir to select the directory.")
+    return None
+
+
+def findHighestVersion(root):
+    "Returns the path to the folder with the higest number in the name"
+
+    highest_version = 0
+    highest_version_folder = ""
+
+    for entry in os.scandir(root):
+        if entry.is_dir():
+            try:
+                version_number = int(entry.name)
+                if version_number > highest_version:
+                    highest_version = version_number
+                    highest_version_folder = entry.path
+            except ValueError:
+                continue
+
+    return highest_version_folder
+
 
 # if it works it ain't stupid
 def checkgpf():
