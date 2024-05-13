@@ -320,6 +320,9 @@ def delete():
         try:
             os.remove(localconfig['files'][i])
             num_deleted += 1
+        except PermissionError:
+            errorPrompt(f"Operation aborted: Permission was denied on a file or folder. Did you close unreal engine and you IDE?")
+            sys.exit()
         except FileNotFoundError:
             pass
 
@@ -328,6 +331,9 @@ def delete():
         try:
             shutil.rmtree(localconfig['folders'][i])
             num_deleted += 1
+        except PermissionError:
+            errorPrompt(f"Operation aborted: Permission was denied on a file or folder. Did you close unreal engine and you IDE?")
+            sys.exit()
         except FileNotFoundError:
             pass
 
@@ -337,6 +343,9 @@ def delete():
             try:
                 os.remove(file)
                 num_deleted += 1
+            except PermissionError:
+                errorPrompt(f"Operation aborted: Permission was denied on a file or folder. Did you close unreal engine and you IDE?")
+                sys.exit()
             except FileNotFoundError:
                 pass
         
