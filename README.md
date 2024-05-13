@@ -1,6 +1,6 @@
 # Unreal Cleanup Tool
 
-⚠ This repository is archived and is superseded by [unreal-utility](https://github.com/henriksen-marcus/unreal-utility).
+⚠ This program is superseded by [unreal-utility](https://github.com/henriksen-marcus/unreal-utility). It's not worked on anymore and might not work like expected.
 
 ## What is it?
 It's a python script with the purpose of quickly deleting unreal engine temporary files for C++ projects such as `Binaries`, `Intermediate` etc.
